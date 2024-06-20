@@ -1,0 +1,8 @@
+When you run this code, it will display the patient assignments after training the agent. Here is an example of the expected output during the test phase:
+Training finished.
+
+Patient assignments: [0 0 0 0 0]
+Patient assignments: [0 1 0 0 0]
+Patient assignments: [0 1 2 0 0]
+Patient assignments: [0 1 2 3 0]
+Patient assignments: [0 1 2 3 4]
