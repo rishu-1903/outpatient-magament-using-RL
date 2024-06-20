@@ -1,0 +1,102 @@
+import gym
+from gym import spaces
+import numpy as np
+import random
+from collections import defaultdict
+
+# Define the custom outpatient environment
+class OutpatientEnv(gym.Env):
+    def __init__(self):
+        super(OutpatientEnv, self).__init__()
+        self.num_slots = 10  # Number of time slots available
+        self.num_patients = 5  # Number of patients to schedule
+        self.current_patient = 0
+        
+        # Define action and observation space
+        self.action_space = spaces.Discrete(self.num_slots)
+        self.observation_space = spaces.Discrete(self.num_patients)
+        
+        # Initialize state
+        self.state = self._get_initial_state()
+        
+    def _get_initial_state(self):
+        return np.zeros(self.num_patients, dtype=int)
+    
+    def reset(self):
+        self.current_patient = 0
+        self.state = self._get_initial_state()
+        return self.current_patient
+    
+    def step(self, action):
+        reward = 0
+        done = False
+        info = {}
+        
+        # Assign patient to the chosen slot if it's available
+        if action not in self.state:
+            self.state[self.current_patient] = action
+            reward = 1  # Reward for successful scheduling
+        else:
+            reward = -1  # Penalty for choosing an already taken slot
+        
+        self.current_patient += 1
+        
+        if self.current_patient >= self.num_patients:
+            done = True
+            
+        return self.current_patient, reward, done, info
+    
+    def render(self, mode='human'):
+        print(f'Patient assignments: {self.state}')
+
+# Register the environment
+gym.envs.registration.register(
+    id='Outpatient-v0',
+    entry_point=OutpatientEnv
+)
+
+# Q-learning parameters
+alpha = 0.1
+gamma = 0.6
+epsilon = 0.1
+num_episodes = 1000
+
+# Initialize Q-table
+q_table = defaultdict(lambda: np.zeros(10))
+
+# Q-learning algorithm
+env = OutpatientEnv()
+
+for i in range(num_episodes):
+    state = env.reset()
+    epochs, penalties, reward = 0, 0, 0
+    done = False
+    
+    while not done:
+        if random.uniform(0, 1) < epsilon:
+            action = env.action_space.sample()  # Explore action space
+        else:
+            action = np.argmax(q_table[state])  # Exploit learned values
+        
+        next_state, reward, done, info = env.step(action)
+        
+        old_value = q_table[state][action]
+        next_max = np.max(q_table[next_state])
+        
+        new_value = (1 - alpha) * old_value + alpha * (reward + gamma * next_max)
+        q_table[state][action] = new_value
+        
+        state = next_state
+        epochs += 1
+
+print("Training finished.\n")
+
+# Test the trained agent
+state = env.reset()
+done = False
+env.render()
+
+while not done:
+    action = np.argmax(q_table[state])
+    state, reward, done, info = env.step(action)
+    env.render()
